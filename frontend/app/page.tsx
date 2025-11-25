@@ -19,6 +19,23 @@ export default function Home() {
   const [matchDetails, setMatchDetails] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
+  const [coaching, setCoaching] = useState<{[key: string]: string}>({})
+  const [loadingCoaching, setLoadingCoaching] = useState<string | null>(null)
+
+
+  async function getCoaching(matchId: string, playerStats: any){
+    setLoadingCoaching(matchId);
+
+    const response = await fetch('http://localhost:3001/api/coaching', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(playerStats)
+    })
+
+    const data = await response.json();
+    setCoaching(prev => ({...prev, [matchId]: data.coaching }))
+    setLoadingCoaching(null)
+  }
 
 
 
@@ -94,7 +111,37 @@ export default function Home() {
                 </div>
                 {isExpanded && (
                   <div className='mt-4 pt-4 border-t border-gray-600'>
+                    <div className='mt-4 mb-6'>
+                        {!coaching[match.metadata.matchId] ? (
+                          <button onClick={(e) => {
+                            e.stopPropagation();
+                            getCoaching(match.metadata.matchId, player);
+                          }} disabled={loadingCoaching === match.metadata.matchId}
+                          className='w-full bg-purple-950 hover:bg-purple-900 px-4 py-2 rounded font-semibold disabled:opacity-50'> {loadingCoaching === match.metadata.matchId ? 'Analysing...' : 'Get AI Coaching'}
+                          </button>
+                        ): (
+                          <div className='bg-gray-800/50 p-4 rounded'>
+                            <p className='text-sm font-bold text-blue-400 mb-3'>
+                              KaissuBot:
+                            </p>
+                            <div className='space-y-2'>
+                              {coaching[match.metadata.matchId].split('\n').filter((line: string) => line.trim()).map((tip: string, i: number) => (
+                                <div key={i} className='flex gap-3'>
+                                  <span className='text-blue-400 font-bold'>
+                                    {i + 1}.
+                                  </span>
+                                  <p className='text-sm text-gray-200'>
+                                    {tip.replace(/^\d+\.\s*/,'')}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                        )}
+                      </div>
                     <div className='grid grid-cols-2 gap-4'>
+                      
                       <div>
 
                         <p className='text-gray-400'>
