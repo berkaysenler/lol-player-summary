@@ -6,19 +6,47 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 })
 
-async function getMatchCoaching(playerStats){
-    const prompt = `You are a direct, no-nonsense challenger League of legends coach. analyse this match performance and give exactly 3 actioanable tips.
-    
-    Match Stats:
-  - Champion: ${playerStats.championName}
-  - Result: ${playerStats.win ? 'Victory': 'Defeat'}
-  - KDA: ${playerStats.kills}/${playerStats.deaths}/${playerStats.assists}
-  - CS: ${playerStats.totalMinionsKilled + playerStats.neutralMinionsKilled}
-  - Damage: ${playerStats.totalDamageDealtToChampions}
-  - Vision Score: ${playerStats.visionScore}
-  - Gold: ${playerStats.goldEarned}
-    
-   Format your response as a numbered list (1. 2. 3.) with each tip on a new line.Do not add '*' at the beginning of the tips.`;
+async function getMatchCoaching(matchData){
+    const player = matchData.player;
+      const match = matchData.match;
+
+      // Get team comps
+      const playerTeam = match.info.participants.filter(p => p.teamId === player.teamId);
+      const enemyTeam = match.info.participants.filter(p => p.teamId !== player.teamId);
+
+      // Get objectives
+      const playerTeamData = match.info.teams.find(t => t.teamId ===  player.teamId);
+      const enemyTeamData = match.info.teams.find(t => t.teamId !== player.teamId);
+
+      const prompt = `You are a challenger 
+        League of Legends coach analyzing a 
+        match. Provide exactly 3 specific, 
+        actionable tips for improvement.
+
+        **Player Performance:**
+        - Champion: ${player.championName}
+        - Result: ${player.win ? 'Victory' : 'Defeat'}
+        - KDA: ${player.kills}/${player.deaths}/${player.assists}
+        - CS: ${player.totalMinionsKilled + player.neutralMinionsKilled}
+        - Damage: ${player.totalDamageDealtToChampions}
+        - Vision Score: ${player.visionScore}
+        - Gold: ${player.goldEarned}
+
+        Team Composition:
+        Your Team: ${playerTeam.map(p => p.championName).join(', ')}
+        Enemy Team: ${enemyTeam.map(p => p.championName).join(', ')}
+
+        Objectives:
+        Your Team - Dragons: ${playerTeamData.objectives.dragon.kills}, Baron: ${playerTeamData.objectives.baron.kills}, 
+        Towers: ${playerTeamData.objectives.tower.kills}
+        Enemy Team - Dragons: ${enemyTeamData.objectives.dragon.kills}, Baron: ${enemyTeamData.objectives.baron.kills}, 
+        Towers: ${enemyTeamData.objectives.tower.kills}
+
+        Analyze this match considering team 
+        compositions, objective control, and 
+        individual performance. Format your 
+        response as a numbered list (1. 2. 3.) 
+        with each tip on a new line. Avoid using '**'`;
 
 
     const response = await openai.chat.completions.create({

@@ -1,5 +1,6 @@
 'use client'
 import TeamComposition from "./TeamComposition";
+import ObjectivesDisplay from "./ObjectivesDisplay";
 
 interface MatchCardProps {
     match: any;
@@ -28,15 +29,49 @@ export default function MatchCard({
 
     return(
         <div key={match.metadata.matchId}
-        className={`p-4 rounded-lg border-l-4 cursor-pointer transition-all ${isWin ? 'bg-green-400/30 border-green-500' : 'bg-red-900/30 border-red-500'}`} 
+        className={`relative p-4 rounded-lg 
+            border-l-4 cursor-pointer 
+            transition-all overflow-hidden ${isWin 
+            ? 'border-green-500' : 
+            'border-red-500'}`} 
         onClick={() => setExpandedMatch(isExpanded ? null : match.metadata.matchId)}>
 
-            <div className='flex justify-between items-center'>
+            {/* Background splahs art */}
+            <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{backgroundImage: `url(https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${player.championName}_0.jpg)`}}
+            />
+
+            {/* Dark overlay */}
+            <div 
+                className={`absolute inset-0 
+                ${isWin ? 'bg-green-900/50' : 
+                'bg-red-900/50'}`} 
+            />
+
+            <div className='relative z-10 flex justify-between items-center'>
                   <div>
 
                     <p className='text-lg font-bold'>Champion: {player.championName}</p>
                     <p className='text-gray-400'>{isWin ? 'Victory' : 'Defeat' } </p>
 
+                    {!isExpanded && (
+                        <div className="flex gap-0.5 mt-2">
+                            {[player.item0, player.item1,
+                            player.item2, player.item3,
+                            player.item4,
+                            player.item5].map((itemId, idx) => itemId !== 0 ? (
+                        <img 
+                        key={idx}
+                        src={`https://ddragon.leagueoflegends.com/cdn/15.23.1/img/item/${itemId}.png`}
+                        alt={`Item ${itemId}`}
+                        className="w-6 h-6 
+                        rounded border border-gray-600"
+                        />
+                        ) : null
+                        )}
+                        </div>
+                    )}
                   </div>
                   <div className='text-right'>
 
@@ -45,15 +80,30 @@ export default function MatchCard({
                   </div>
                 </div>
                 {isExpanded && (
-                  <div className='mt-4 pt-4 border-t border-gray-600'>
+                  <div className='relative z-10 mt-4 pt-4 border-t border-gray-600'>
                     <div className='mt-4 mb-6'>
                         {!coaching[match.metadata.matchId] ? (
-                          <button onClick={(e) => {
-                            e.stopPropagation();
-                            getCoaching(match.metadata.matchId, player);
-                          }} disabled={loadingCoaching === match.metadata.matchId}
-                          className='w-full bg-purple-950 hover:bg-purple-900 px-4 py-2 rounded font-semibold disabled:opacity-50'> {loadingCoaching === match.metadata.matchId ? 'Analysing...' : 'Get AI Coaching'}
-                          </button>
+                            <div className="flex justify-center">
+
+                                <button onClick={(e) => {
+                                    e.stopPropagation();
+                                    getCoaching(match.metadata.matchId, {player, match});
+                                    }} disabled={loadingCoaching === match.metadata.matchId}
+                                    className='bg-purple-950 
+                                    hover:bg-purple-900 px-3 py-1.5 rounded
+                                    text-sm font-semibold 
+                                    disabled:opacity-50 flex items-center 
+                                    justify-center gap-2 group relative'
+                                    title="Ask AI about this match"> 
+                                    <span className="text-xl">✨</span>
+                                    <span>
+                                        {loadingCoaching === match.metadata.matchId ? 'Analysing...' : 'AI Analysis'}
+                                    </span>
+                                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                    Ask AI about this match
+                                    </span>
+                                </button>
+                            </div>
                         ): (
                           <div className='bg-gray-800/50 p-4 rounded'>
                             <p className='text-sm font-bold text-blue-400 mb-3'>
@@ -76,6 +126,7 @@ export default function MatchCard({
                         )}
                         <TeamComposition participants={match.info.participants} 
                         userPuuid={summoner.puuid}/>
+                        <ObjectivesDisplay teams={match.info.teams}/>
                       </div>
 
                     <div className='grid grid-cols-2 gap-4'>

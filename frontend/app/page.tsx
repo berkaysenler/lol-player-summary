@@ -67,6 +67,7 @@ export default function Home() {
       <h1 className='text-4xl font-bold text-center mb-8'>Coaching</h1>
       <div className='flex gap-4 justify-center mb-8'>
         <input type="text" placeholder="Summoner Name" value={gameName} onChange={(e) => setGameName(e.target.value)} className='px-4 py-2 rounded bg-gray-900 border border-gray-700 focus:outline-none focus:border-yellow-700' />
+        
         <input type="text" placeholder="Riot Tag" value={tagLine} onChange={(e) => setTagLine(e.target.value)} className='px-4 py-2 rounded bg-gray-900 border border-gray-700 focus:outline-none focus:border-yellow-700'/>
       </div>
       <div className='flex justify-center mb-8'>
