@@ -1,3 +1,4 @@
+import redis from '../cache/redis'
 import pool from '../db/index'
 import 'dotenv/config'
 
@@ -57,14 +58,25 @@ async function getMatchIds(puuid: string){
 
 async function getMatchDetails(matchId: string){
 
+    const cachedMatch = await redis.get(`match:${matchId}`);
+    if(cachedMatch){
+        console.log(`Cache hit: Redis`);
+        return cachedMatch
+    }
+
     const dbResult = await pool.query(
         'SELECT match_data FROM matches WHERE match_id = $1',
         [matchId]
     )
     if(dbResult.rows.length > 0) {
-        return dbResult.rows[0].match_data
+        console.log('Cache hit: PostgreSQL')   
+        const matchData = dbResult.rows[0].match_data;
+
+        await redis.set(`match:${matchId}`, matchData, {ex: 1800})
+        return matchData;
     }
     
+    console.log('Cache miss: Calling Riot API');
     
     const response = await fetch (`https://sea.api.riotgames.com/lol/match/v5/matches/${matchId}`, {
         headers: {
@@ -73,9 +85,15 @@ async function getMatchDetails(matchId: string){
     })
 
     const data = await response.json() as MatchData;
-    await pool.query(
-        'INSERT INTO matches (match_id, match_data) VALUES ($1, $2) ON CONFLICT (match_id) DO NOTHING', [matchId, data]
-    )
+
+    await Promise.all([
+        redis.set(`match:${matchId}`, data, {ex: 1800}),
+
+        pool.query(
+            'INSERT INTO matches (match_id, match_data) VALUES ($1, $2) ON CONFLICT (match_id) DO NOTHING', [matchId, data]
+        )
+    ]);
+    
     return data;
 }
 export {getAccount, getMatchIds, getMatchDetails};

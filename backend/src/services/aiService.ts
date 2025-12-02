@@ -1,3 +1,4 @@
+import redis from '../cache/redis'
 import pool from '../db/index'
 import 'dotenv/config'
 
@@ -13,13 +14,26 @@ async function getMatchCoaching(matchData: any){
       const matchId = match.metadata.matchId;
       const puuid = player.puuid;
 
+      const cacheKey = `coaching:${matchId}:${puuid}`;
+      const cachedCoaching = await redis.get(cacheKey);
+      if(cachedCoaching){
+        console.log('Coaching cache hit: Redis');
+      }
+
+
+
       const dbResult = await pool.query(
         'SELECT coaching_text FROM coaching WHERE match_id = $1 AND puuid = $2',
         [matchId, puuid]
       )
       if(dbResult.rows.length > 0){
-        return dbResult.rows[0].coaching_text;
+        console.log('Coaching cache hit: PostgreSQL');
+        const coachingText =  dbResult.rows[0].coaching_text;
+
+        await redis.set(cacheKey, coachingText, {ex: 3600});
+        return coachingText;
       }
+      console.log('Coaching cache miss: Calling OpenAI');
 
       // Get team comps
       const playerTeam = match.info.participants.filter((p:any) => p.teamId === player.teamId);
@@ -68,9 +82,12 @@ async function getMatchCoaching(matchData: any){
 
     const coachingText = response.choices[0].message.content;
 
-    await pool.query('INSERT INTO coaching (match_id, puuid, coaching_text) VALUES ($1, $2, $3)',
+    await Promise.all([redis.set(cacheKey, coachingText, {ex: 3600}), 
+        pool.query('INSERT INTO coaching (match_id, puuid, coaching_text) VALUES ($1, $2, $3)',
         [matchId, puuid, coachingText]
-    )
+        )
+    ])
+
 
     return coachingText;    
 }
