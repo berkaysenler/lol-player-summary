@@ -1,3 +1,4 @@
+import pool from '../db/index'
 import 'dotenv/config'
 
 import OpenAI from 'openai' 
@@ -7,8 +8,18 @@ const openai = new OpenAI({
 })
 
 async function getMatchCoaching(matchData: any){
-    const player = matchData.player;
+      const player = matchData.player;
       const match = matchData.match;
+      const matchId = match.metadata.matchId;
+      const puuid = player.puuid;
+
+      const dbResult = await pool.query(
+        'SELECT coaching_text FROM coaching WHERE match_id = $1 AND puuid = $2',
+        [matchId, puuid]
+      )
+      if(dbResult.rows.length > 0){
+        return dbResult.rows[0].coaching_text;
+      }
 
       // Get team comps
       const playerTeam = match.info.participants.filter((p:any) => p.teamId === player.teamId);
@@ -23,7 +34,7 @@ async function getMatchCoaching(matchData: any){
         match. Provide exactly 3 specific, 
         actionable tips for improvement.
 
-        **Player Performance:**
+        Player Performance:
         - Champion: ${player.championName}
         - Result: ${player.win ? 'Victory' : 'Defeat'}
         - KDA: ${player.kills}/${player.deaths}/${player.assists}
@@ -55,7 +66,13 @@ async function getMatchCoaching(matchData: any){
         max_tokens: 400
     })
 
-    return response.choices[0].message.content;
+    const coachingText = response.choices[0].message.content;
+
+    await pool.query('INSERT INTO coaching (match_id, puuid, coaching_text) VALUES ($1, $2, $3)',
+        [matchId, puuid, coachingText]
+    )
+
+    return coachingText;    
 }
 
 export {getMatchCoaching}
