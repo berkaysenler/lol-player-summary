@@ -1,7 +1,10 @@
-const express = require('express')
+import express, {Request, Response} from 'express'
+
+
 const router = express.Router()
-const {getMatchCoaching} = require('../services/aiService')
-    router.post('/api/coaching', async (req, res) => {
+import {getMatchCoaching} from '../services/aiService'
+
+    router.post('/api/coaching', async (req: Request, res: Response) => {
 
         try{
             const playerStats = req.body;
@@ -15,4 +18,4 @@ const {getMatchCoaching} = require('../services/aiService')
     })
 
 
-module.exports = router;
+export default router

@@ -1,22 +1,22 @@
-require ('dotenv').config()
+import 'dotenv/config'
 
-const OpenAI = require('openai')
+import OpenAI from 'openai' 
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 })
 
-async function getMatchCoaching(matchData){
+async function getMatchCoaching(matchData: any){
     const player = matchData.player;
       const match = matchData.match;
 
       // Get team comps
-      const playerTeam = match.info.participants.filter(p => p.teamId === player.teamId);
-      const enemyTeam = match.info.participants.filter(p => p.teamId !== player.teamId);
+      const playerTeam = match.info.participants.filter((p:any) => p.teamId === player.teamId);
+      const enemyTeam = match.info.participants.filter((p:any) => p.teamId !== player.teamId);
 
       // Get objectives
-      const playerTeamData = match.info.teams.find(t => t.teamId ===  player.teamId);
-      const enemyTeamData = match.info.teams.find(t => t.teamId !== player.teamId);
+      const playerTeamData = match.info.teams.find((t:any) => t.teamId ===  player.teamId);
+      const enemyTeamData = match.info.teams.find((t:any) => t.teamId !== player.teamId);
 
       const prompt = `You are a challenger 
         League of Legends coach analyzing a 
@@ -33,8 +33,8 @@ async function getMatchCoaching(matchData){
         - Gold: ${player.goldEarned}
 
         Team Composition:
-        Your Team: ${playerTeam.map(p => p.championName).join(', ')}
-        Enemy Team: ${enemyTeam.map(p => p.championName).join(', ')}
+        Your Team: ${playerTeam.map((p:any) => p.championName).join(', ')}
+        Enemy Team: ${enemyTeam.map((p:any) => p.championName).join(', ')}
 
         Objectives:
         Your Team - Dragons: ${playerTeamData.objectives.dragon.kills}, Baron: ${playerTeamData.objectives.baron.kills}, 
@@ -58,4 +58,4 @@ async function getMatchCoaching(matchData){
     return response.choices[0].message.content;
 }
 
-module.exports = {getMatchCoaching}
+export {getMatchCoaching}

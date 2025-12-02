@@ -1,8 +1,9 @@
-require('dotenv').config()
-const express = require('express')
-const cors = require('cors')
-const aiRoutes = require('./routes/aiRoutes')
-const riotRoutes = require('./routes/riotRoutes')
+import 'dotenv/config';
+import express  from 'express'
+import cors  from 'cors'
+import aiRoutes  from './routes/aiRoutes'
+import riotRoutes  from './routes/riotRoutes'
+
 const app = express()
 const PORT = 3001;
 

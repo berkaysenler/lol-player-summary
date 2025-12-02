@@ -1,14 +1,15 @@
-const express = require('express');
+import express, {Request, Response} from 'express'
 const router = express.Router();
 
-const {getAccount, getMatchIds, getMatchDetails} = require('../services/riotService')
+import {getAccount, getMatchIds, getMatchDetails} from '../services/riotService'
 
 //SUMMONER ENDPOINT
-router.get('/api/summoner/:gameName/:tagLine', async (req, res) => {
+router.get('/api/summoner/:gameName/:tagLine', async (req: Request, res: Response) => {
     try{
 
         const {gameName, tagLine} = req.params;
-        const data = await getAccount(gameName, tagLine);
+        const data = await getAccount(gameName, tagLine
+        );
         
         res.json(data);
     }
@@ -19,7 +20,7 @@ router.get('/api/summoner/:gameName/:tagLine', async (req, res) => {
 });
 
 //MATCHES ENDPOINT
-router.get('/api/matches/:puuid', async (req, res) => {
+router.get('/api/matches/:puuid', async (req: Request, res: Response) => {
     try{
 
         const {puuid} = req.params;
@@ -34,7 +35,7 @@ router.get('/api/matches/:puuid', async (req, res) => {
 });
 
 //MATCHID ENDPOINT
-router.get('/api/match/:matchId', async (req, res) => {
+router.get('/api/match/:matchId', async (req: Request, res: Response) => {
     try{
 
         const {matchId} = req.params;
@@ -48,4 +49,4 @@ router.get('/api/match/:matchId', async (req, res) => {
 
 });
 
-module.exports = router;
+export default router;
