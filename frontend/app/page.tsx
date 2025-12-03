@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 import MatchCard from './components/MatchCard';
+import {supabase} from '@/lib/supabase'
+import {useEffect} from 'react'
 
 
 
@@ -21,7 +23,23 @@ export default function Home() {
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
   const [coaching, setCoaching] = useState<{[key: string]: string}>({})
   const [loadingCoaching, setLoadingCoaching] = useState<string | null>(null)
+  const [user, setUser] = useState<any>(null)
 
+
+  useEffect(() => {
+    // Check if user is logged in
+    supabase.auth.getSession().then(({
+      data:{session}
+    }) => {
+      setUser(session?.user ?? null)
+    })
+
+    // Listen for auth changes
+    const {data: {subscription}} = supabase.auth.onAuthStateChange((_even, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   async function getCoaching(matchId: string, playerStats: any){
     setLoadingCoaching(matchId);
@@ -61,10 +79,28 @@ export default function Home() {
   
   }
 
+  async function handleLogout(){
+    await supabase.auth.signOut()
+    setUser(null)
+  }
+
   return (
     <main className='min-h-screen bg-gray-800 text-white p-8'>
-
-      <h1 className='text-4xl font-bold text-center mb-8'>Kai.gg</h1>
+      <div className='flex justify-between items-center mb-8'>
+        <h1 className='text-4xl font-bold'>Kai.gg</h1>
+          {user ? (
+            <div className='flex items-center gap-4'>
+              <span className='text-gray-400'>Welcome, {user.email}</span>
+                <button onClick={handleLogout} className='px-4 py-2 bg-red-600 hover:bg-red-700 rounded font-semobold'>
+                  Logout
+                </button>
+            </div>
+          ) : (
+            <a href="/auth" className='px-4 py-2 bg-purple-600 hover:bg-ourple-700 rounded font-semibold'>
+              Login
+              </a>
+          )}
+      </div>
       <div className='flex gap-4 justify-center mb-8'>
         <input type="text" placeholder="Summoner Name" value={gameName} onChange={(e) => setGameName(e.target.value)} className='px-4 py-2 rounded bg-gray-900 border border-gray-700 focus:outline-none focus:border-yellow-700' />
 
