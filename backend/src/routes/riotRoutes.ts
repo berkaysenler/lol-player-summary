@@ -1,7 +1,20 @@
 import express, {Request, Response} from 'express'
 const router = express.Router();
 
-import {getAccount, getMatchIds, getMatchDetails} from '../services/riotService'
+import {getAccount, getMatchIds, getMatchDetails, getSummonerByPuuid, getRankedInfo} from '../services/riotService'
+
+// GET SUMMONER BY PUUID (must be before the generic summoner route)
+router.get('/api/summoner/by-puuid/:puuid',
+    async (req: Request, res: Response) => {
+        try {
+            const { puuid } = req.params;
+            const data = await getSummonerByPuuid(puuid);
+            res.json(data);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Failed to fetch summoner data' });
+        }
+})
 
 //SUMMONER ENDPOINT
 router.get('/api/summoner/:gameName/:tagLine', async (req: Request, res: Response) => {
@@ -10,7 +23,7 @@ router.get('/api/summoner/:gameName/:tagLine', async (req: Request, res: Respons
         const {gameName, tagLine} = req.params;
         const data = await getAccount(gameName, tagLine
         );
-        
+
         res.json(data);
     }
     catch (error) {
@@ -40,13 +53,26 @@ router.get('/api/match/:matchId', async (req: Request, res: Response) => {
 
         const {matchId} = req.params;
         const data = await getMatchDetails(matchId)
-        
+
         res.json(data)
     } catch(error){
         console.log(error);
         res.status(500).json({error: 'Failed to fetch matchId data'});
     }
 
+})
+
+// GET RANKED INFO BY PUUID
+router.get('/api/ranked/:puuid',
+    async (req: Request, res: Response) => {
+        try {
+            const { puuid } = req.params;
+            const data = await getRankedInfo(puuid);
+            res.json(data);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Failed to fetch ranked data' });
+        }
 });
 
 export default router;

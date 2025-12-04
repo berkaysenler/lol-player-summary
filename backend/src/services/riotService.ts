@@ -13,6 +13,13 @@ interface MatchData {
     info: any
 }
 
+// Regional endpoints configuration
+// For OCE (Oceania) region:
+// - Routing: sea (for match data and account data)
+// - Platform: oc1 (for summoner/ranked data)
+const ROUTING_REGION = 'sea'; // americas, asia, europe, sea
+const PLATFORM_REGION = 'oc1'; // oc1, na1, euw1, kr, etc.
+
 async function getAccount(gameName: string, tagLine: string){
     const dbResult = await pool.query(
         'SELECT * FROM summoners WHERE game_name = $1 AND tag_line = $2',
@@ -26,32 +33,56 @@ async function getAccount(gameName: string, tagLine: string){
             tagLine: summoner.tag_line
         }
     }
-    const response = await fetch(`https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${gameName}/${tagLine}`, {
+
+    const url = `https://${ROUTING_REGION}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${gameName}/${tagLine}`;
+    console.log(`Fetching account from: ${url}`);
+
+    const response = await fetch(url, {
         headers: {
             'X-Riot-Token': process.env.RIOT_API_KEY
         }
     })
 
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Riot API error response:`, errorBody);
+        throw new Error(`Riot API error: ${response.status} - ${response.statusText}`);
+    }
+
     const data = await response.json() as RiotAccountData;
+
+    // Validate that we have the required data before inserting
+    if (!data.puuid || !data.gameName || !data.tagLine) {
+        throw new Error('Invalid summoner data received from Riot API');
+    }
 
     await pool.query('INSERT INTO summoners (puuid, game_name, tag_line) VALUES ($1, $2, $3) ON CONFLICT (puuid) DO NOTHING',
         [data.puuid, data.gameName, data.tagLine]
     )
     return data;
-    
+
 }
 
 
 async function getMatchIds(puuid: string){
+    // Add query parameters to get last 20 matches of any type
+    const url = `https://${ROUTING_REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=20`;
+    console.log(`Fetching match IDs from: ${url}`);
 
-    
-
-    const response = await fetch (`https://sea.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids`, {
+    const response = await fetch (url, {
         headers: {
             'X-Riot-Token' : process.env.RIOT_API_KEY
         }
     })
-    const data = await response.json();
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Riot API error response:`, errorBody);
+        throw new Error(`Riot API error: ${response.status} - ${response.statusText}`);
+    }
+
+    const data = await response.json() as string[];
+    console.log(`Match IDs returned: ${data.length} matches`, data);
     return data;
 }
 
@@ -77,12 +108,21 @@ async function getMatchDetails(matchId: string){
     }
     
     console.log('Cache miss: Calling Riot API');
-    
-    const response = await fetch (`https://sea.api.riotgames.com/lol/match/v5/matches/${matchId}`, {
+
+    const url = `https://${ROUTING_REGION}.api.riotgames.com/lol/match/v5/matches/${matchId}`;
+    console.log(`Fetching match details from: ${url}`);
+
+    const response = await fetch (url, {
         headers: {
             'X-Riot-Token' : process.env.RIOT_API_KEY
         }
     })
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Riot API error response:`, errorBody);
+        throw new Error(`Riot API error: ${response.status} - ${response.statusText}`);
+    }
 
     const data = await response.json() as MatchData;
 
@@ -96,4 +136,45 @@ async function getMatchDetails(matchId: string){
     
     return data;
 }
-export {getAccount, getMatchIds, getMatchDetails};
+
+async function getSummonerByPuuid(puuid: string){
+    const url = `https://${PLATFORM_REGION}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
+    console.log(`Fetching summoner from: ${url}`);
+
+    const response = await fetch (url, {
+        headers: {
+            'X-Riot-Token': process.env.RIOT_API_KEY
+        }
+    })
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Riot API error response:`, errorBody);
+        throw new Error(`Riot API error: ${response.status} - ${response.statusText}`);
+    }
+
+    const data = await response.json()
+    return data
+}
+
+async function getRankedInfo(puuid: string){
+    const url = `https://${PLATFORM_REGION}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`;
+    console.log(`Fetching ranked info from: ${url}`);
+
+    const response = await fetch(url, {
+        headers: {
+            'X-Riot-Token': process.env.RIOT_API_KEY
+        }
+    })
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Riot API error response:`, errorBody);
+        throw new Error(`Riot API error: ${response.status} - ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+}
+
+export {getAccount, getMatchIds, getMatchDetails, getRankedInfo, getSummonerByPuuid};

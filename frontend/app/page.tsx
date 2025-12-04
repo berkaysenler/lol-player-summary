@@ -1,9 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MatchCard from './components/MatchCard';
 import {supabase} from '@/lib/supabase'
-import {useEffect} from 'react'
-
+import Navbar from './components/Navbar';
+import SummonerProfile from './components/SummonerProfile';
+import MatchList from './components/MatchList';
+import SearchBar from './components/SearchBar';
+import FavoritesSidebar from './components/FavoritesSideBar';
 
 
 export default function Home() {
@@ -24,6 +27,10 @@ export default function Home() {
   const [coaching, setCoaching] = useState<{[key: string]: string}>({})
   const [loadingCoaching, setLoadingCoaching] = useState<string | null>(null)
   const [user, setUser] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [summonerDetails, setSummonerDetails] = useState<any>(null)
+  const [rankedInfo, setRankedInfo] = useState<any[]>([])
+  const [matchesDisplayed, setMatchesDisplayed] = useState(5)
 
 
   useEffect(() => {
@@ -31,115 +38,307 @@ export default function Home() {
     supabase.auth.getSession().then(({
       data:{session}
     }) => {
-      setUser(session?.user ?? null)
+      const currentUser = session?.user ?? null;
+      setUser(currentUser)
+      console.log('Session user:', currentUser)
+      if(currentUser){
+        loadFavorites()
+      }
     })
 
     // Listen for auth changes
     const {data: {subscription}} = supabase.auth.onAuthStateChange((_even, session) => {
-      setUser(session?.user ?? null)
+      const currentUser = session?.user ?? null;
+      setUser(currentUser)
+      if(currentUser){
+        loadFavorites()
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
 
+  useEffect(() => {
+    if(user) {
+      loadFavorites();
+    }
+  }, [user])
+
   async function getCoaching(matchId: string, playerStats: any){
     setLoadingCoaching(matchId);
 
-    const response = await fetch('http://localhost:3001/api/coaching', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(playerStats)
-    })
+    try {
+      const response = await fetch('http://localhost:3001/api/coaching', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(playerStats)
+      })
 
-    const data = await response.json();
-    setCoaching(prev => ({...prev, [matchId]: data.coaching }))
-    setLoadingCoaching(null)
+      if (!response.ok) {
+        throw new Error('Failed to get coaching analysis');
+      }
+
+      const data = await response.json();
+      setCoaching(prev => ({...prev, [matchId]: data.coaching }))
+    } catch (err: any) {
+      console.error('Error getting coaching:', err)
+      setCoaching(prev => ({...prev, [matchId]: 'Failed to load coaching analysis. Please try again.' }))
+    } finally {
+      setLoadingCoaching(null)
+    }
   }
 
 
 
 
-  async function searchSummoner(){
+  async function searchSummoner(gameName: string, tagLine: string){
+    setLoading(true)
+    setError(null)
+
+    setSummoner(null);
+    setSummonerDetails(null)
+    setRankedInfo([])
+    setMatchesDisplayed(5)
+    setMatches([]);
+    setMatchDetails([]);
+    setCoaching({});
+    setExpandedMatch(null);
+
+    try {
+      const summonerRes = await fetch(`http://localhost:3001/api/summoner/${gameName}/${tagLine}`);
+
+      if (!summonerRes.ok) {
+        const errorData = await summonerRes.json();
+        throw new Error(errorData.error || 'Failed to fetch summoner data');
+      }
+
+      const summonerData = await summonerRes.json();
+      setSummoner(summonerData);
+
+      const [detailsRes, rankedRes] = await Promise.all([fetch(`http://localhost:3001/api/summoner/by-puuid/${summonerData.puuid}`), fetch(`http://localhost:3001/api/ranked/${summonerData.puuid}`)])
+
+      const details = detailsRes.ok ? await detailsRes.json() : null;
+      const ranked = rankedRes. ok ? await rankedRes.json() : [];
+
+      setSummonerDetails(details)
+      setRankedInfo(ranked)
+
+      const matchesRes = await fetch(`http://localhost:3001/api/matches/${summonerData.puuid}`);
+
+      if (!matchesRes.ok) {
+        const errorData = await matchesRes.json();
+        throw new Error(errorData.error || 'Failed to fetch match data');
+      }
+
+      const matchesData = await matchesRes.json()
+      console.log('Matches data:', matchesData)
+
+      if(!Array.isArray(matchesData)) {
+        console.error('Expected array but got:', matchesData)
+        throw new Error('Invalid match data received');
+      }
+
+      setMatches(matchesData)
+
+      const detailsPromises = matchesData.slice(0, matchesDisplayed).map((matchId:string) =>
+        fetch(`http://localhost:3001/api/match/${matchId}`)
+          .then(res => {
+            if (!res.ok) throw new Error('Failed to fetch match details');
+            return res.json();
+          })
+      )
+
+      const detailsData = await Promise.all(detailsPromises)
+      setMatchDetails(detailsData)
+    } catch (err: any) {
+      console.error('Error searching summoner:', err)
+      setError(err.message || 'An error occurred while searching for the summoner')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+
+
+
+  async function loadMoreMatches(){
+    if(!matches || matches.length === 0) return
+
+    const newDisplayCount = matchesDisplayed + 5;
+    const matchesToFetch = matches.slice(matchesDisplayed, newDisplayCount)
+
     setLoading(true)
 
-    const summonerRes = await fetch(`http://localhost:3001/api/summoner/${gameName}/${tagLine}`);
-    const summonerData = await summonerRes.json();
-    setSummoner(summonerData);
+    try{
+      const detailsPromises = matchesToFetch.map((matchId: string) => fetch(`http://localhost:3001/api/match/${matchId}`).then(res => {
+        if(!res.ok) throw new Error('Failed to fetch match details');
+        return res.json()
+      }))
 
-    const matchesRes = await fetch(`http://localhost:3001/api/matches/${summonerData.puuid}`);
-    const matchesData = await matchesRes.json()
-    setMatches(matchesData)
+      const newDetails = await Promise.all(detailsPromises)
+      setMatchDetails([...matchDetails, ...newDetails])
 
-    const detailsPromises = matchesData.slice(0,5).map((matchId:string) => fetch (`http://localhost:3001/api/match/${matchId}`).then(res => res.json()))
-
-    const detailsData = await Promise.all(detailsPromises)
-    setMatchDetails(detailsData)
-
-    setLoading(false)
-
-  
+      setMatchesDisplayed(newDisplayCount)
+    } catch (err: any){
+      console.error('Error loading more matches:', err)
+      setError(err.message || 'Failed to load more matches')
+    } finally {
+      setLoading(false)
+    }
   }
+
+
 
   async function handleLogout(){
     await supabase.auth.signOut()
     setUser(null)
   }
 
+  const [favoriteSummoners, setFavoriteSummoners] = useState<any>([])
+
+  async function loadFavorites() {
+    console.log('loadFavorites called, user:', user);
+
+    if (!user) {
+      console.log('No user, skipping favorites load');
+      return;
+    }
+
+    console.log('Fetching favorites for user:', user.id);
+
+    try {
+      const { data, error } = await supabase
+        .from('favorite_summoners')
+        .select('*')
+        .eq('user_id', user.id);
+
+      console.log('Favorites data:', data);
+      console.log('Favorites error:', error);
+
+      if (error) {
+        console.error('Error loading favorites:', error);
+        return;
+      }
+
+      // Fetch detailed info for each favorite
+      const enrichedFavorites = await Promise.all(
+        (data || []).map(async (fav) => {
+          try {
+            // Fetch summoner details and ranked info in parallel
+            const [summonerRes, rankedRes] = await Promise.all([
+              fetch(`http://localhost:3001/api/summoner/by-puuid/${fav.puuid}`),
+              fetch(`http://localhost:3001/api/ranked/${fav.puuid}`)
+            ]);
+
+            const summonerData = summonerRes.ok ? await summonerRes.json() : null;
+            const rankedData = rankedRes.ok ? await rankedRes.json() : [];
+
+            return {
+              ...fav,
+              profileIconId: summonerData?.profileIconId,
+              summonerLevel: summonerData?.summonerLevel,
+              rankedData: rankedData
+            };
+          } catch (err) {
+            console.error('Error fetching details for', fav.game_name, err);
+            return fav; // Return basic data if fetch fails
+          }
+        })
+      );
+
+      setFavoriteSummoners(enrichedFavorites);
+      console.log('Set enriched favorites:', enrichedFavorites);
+    } catch (err) {
+      console.error('Error in loadFavorites:', err);
+    }
+  }
+
+  async function toggleFavorite(){
+    if(!user || !summoner) return;
+
+    const isFavorited = favoriteSummoners.some((fav:any) => fav.puuid === summoner.puuid);
+
+    if(isFavorited){
+      const {error} = await supabase.from('favorite_summoners').delete().eq('user_id',user.id).eq('puuid', summoner.puuid)
+
+      if(!error) loadFavorites();
+    } else{
+      const {error} = await supabase.from('favorite_summoners').insert({
+        user_id: user.id,
+        puuid: summoner.puuid,
+        game_name: summoner.gameName,
+        tag_line: summoner.tagLine
+      })
+      if(!error) loadFavorites()
+    }
+  }
+
+  async function removeFavorite(puuid: string) {
+    if(!user) return;
+
+    const{error} = await supabase.from('favorite_summoners').delete().eq('user_id', user.id).eq('puuid', puuid)
+
+    if(!error) {
+      loadFavorites()
+
+      if(summoner?.puuid === puuid) {
+        setSummoner(null)
+        setMatches([])
+        setMatchDetails([])
+      }
+    }
+  }
+
   return (
     <main className='min-h-screen bg-gray-800 text-white p-8'>
-      <div className='flex justify-between items-center mb-8'>
-        <h1 className='text-4xl font-bold'>Kai.gg</h1>
-          {user ? (
-            <div className='flex items-center gap-4'>
-              <span className='text-gray-400'>Welcome, {user.email}</span>
-                <button onClick={handleLogout} className='px-4 py-2 bg-red-600 hover:bg-red-700 rounded font-semobold'>
-                  Logout
-                </button>
+      <Navbar user={user}
+        onLogout={handleLogout}/>
+
+        <div className='flex gap-6'>
+          {/* left sidebar - only if user is logged in */}
+          {user && (
+            <div className='w-90 flex-shrink-0'>
+              <div className='sticky top-8 max-h-[calc(100vh-8rem)] overflow-y-auto'>
+            <FavoritesSidebar favorites={favoriteSummoners}
+            onSelectSummoner={searchSummoner}
+            onRemoveFavorite={removeFavorite}/>
+              </div>
             </div>
-          ) : (
-            <a href="/auth" className='px-4 py-2 bg-purple-600 hover:bg-ourple-700 rounded font-semibold'>
-              Login
-              </a>
           )}
-      </div>
-      <div className='flex gap-4 justify-center mb-8'>
-        <input type="text" placeholder="Summoner Name" value={gameName} onChange={(e) => setGameName(e.target.value)} className='px-4 py-2 rounded bg-gray-900 border border-gray-700 focus:outline-none focus:border-yellow-700' />
+          {/* main content */}
+          <div className='flex-1 min-w-0'>
 
-        <input type="text" placeholder="Riot Tag" value={tagLine} onChange={(e) => setTagLine(e.target.value)} className='px-4 py-2 rounded bg-gray-900 border border-gray-700 focus:outline-none focus:border-yellow-700'/>
-      </div>
-      <div className='flex justify-center mb-8'>
-        <button onClick={searchSummoner} disabled={loading} className='px-6 py-2 bg-purple-950 rounded font-semibold hover:bg-purple-900 disabled:opacity-50 '> {loading? 'Loading...' : 'Get Summoner'}</button>
-      </div>
-      {summoner && (
-        <div className='text-center mb-8'>
-          <p className='text-xl'>Welcome, 
-            <span className='font-bold text-yellow-500'> {summoner.gameName}#{summoner.tagLine}</span>
-          </p>
-        </div>
-      )}  
+      <SearchBar onSearch={searchSummoner}
+        loading={loading}/>
 
-      {matchDetails.length > 0 && (
-        <div>
-          <h2 className='text-2xl font-bold text-center mb-6'>Recent Matches</h2>
-          <div className='flex flex-col gap-4 max-w-2xl mx-auto'>
-
-            {matchDetails.map((match) => (
-              <MatchCard
-
-                key={match.metadata.matchId}
-                match={match}
-                summoner={summoner}
-                expandedMatch = {expandedMatch}
-                setExpandedMatch={setExpandedMatch}
-                coaching = {coaching}
-                loadingCoaching ={loadingCoaching}
-                getCoaching={getCoaching}
-               />
-            ))}
-          
+        {error && (
+          <div className='bg-red-500 text-white p-4 rounded-lg mb-4'>
+            <p className='font-semibold'>Error: {error}</p>
           </div>
-        </div>
-      )}
+        )}
 
+        {summoner && (
+          <SummonerProfile 
+          summoner={summoner}
+          summonerDetails={summonerDetails}
+          rankedInfo={rankedInfo}
+          user={user}
+          isFavorited={favoriteSummoners.some((fav:any) => fav.puuid === summoner.puuid)}
+          onToggleFavorite={toggleFavorite}/>
+        )}
+
+        <MatchList matchDetails={matchDetails}
+          summoner={summoner}
+          expandedMatch={expandedMatch}
+          setExpandedMatch={setExpandedMatch}
+          coaching={coaching}
+          loadingCoaching={loadingCoaching}
+          getCoaching={getCoaching}
+          loading={loading}
+          onLoadMore={loadMoreMatches}
+          totalMatches={matches.length}
+          />
+            </div>
+          </div>
     </main>
     
   );

@@ -33,13 +33,13 @@ export default function MatchCard({
             border-l-4 cursor-pointer 
             transition-all overflow-hidden ${isWin 
             ? 'border-green-500' : 
-            'border-red-500'}`} 
+            'border-red-500'}`}  style={{boxShadow: 'rgba(0, 0, 0, 0.24) 0px 2px 8px 0px'}}
         onClick={() => setExpandedMatch(isExpanded ? null : match.metadata.matchId)}>
 
             {/* Background splahs art */}
             <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{backgroundImage: `url(https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${player.championName}_0.jpg)`}}
+                className="absolute inset-0 bg-cover bg-right"
+                style={{backgroundImage: `url(https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${player.championName}_0.jpg)`, backgroundPosition: 'center 20%'}}
             />
 
             {/* Dark overlay */}
@@ -75,7 +75,7 @@ export default function MatchCard({
                   </div>
                   <div className='text-right'>
 
-                    <p className='text-2xl font-bold'>{player.kills}/{player.deaths}/{player.assists}</p>
+                    <p className='text-2xl font-bold'>{player.kills} / {player.deaths} / {player.assists}</p>
                     <p className='text-gray-400'>KDA</p>
                   </div>
                 </div>
