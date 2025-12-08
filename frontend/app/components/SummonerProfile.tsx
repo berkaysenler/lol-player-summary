@@ -1,5 +1,7 @@
 'use client'
 
+import { getRankIcon, calculateWinrate } from '@/utils/riot'
+
 interface SummonerProfileProps {
     summoner: {
         gameName: string;
@@ -8,29 +10,26 @@ interface SummonerProfileProps {
     };
     summonerDetails: any;
     rankedInfo: any[];
+    region: string;
     user: any;
     isFavorited: boolean;
     onToggleFavorite: () => void;
 }
 
-export default function SummonerProfile({summoner, user, isFavorited, rankedInfo, summonerDetails, onToggleFavorite}: SummonerProfileProps){
+export default function SummonerProfile({summoner, user, isFavorited, rankedInfo, summonerDetails, region, onToggleFavorite}: SummonerProfileProps){
 
-    function getRankIcon(tier: string){
-        if (!tier) return null;
-        return `https://opgg-static.akamaized.net/images/medals_new/${tier.toLowerCase()}.png`;
-    }
+    
 
 
          // Get solo queue rank
         const soloRank = rankedInfo?.find((entry: any) => entry.queueType === 'RANKED_SOLO_5x5');
   
         // Calculate winrate
-        const winrate = soloRank ? Math.round((soloRank.wins / (soloRank.wins + soloRank.losses)) * 100) : 0;
-
+        const winrate = soloRank ? calculateWinrate(soloRank.wins, soloRank.losses) : 0
 
         return(
-            <div className="bg-gray-900 rounded-lg p-6 mb-8">
-                <div className="flex items-center gap-6">
+            <div className="bg-[#5a4965] rounded-lg p-6 mb-8 " style={{boxShadow: 'rgba(0, 0, 0, 0.24) 0px 2px 8px 0px'}}>
+                <div className="flex flex-col md:flex-row items-center md:items-center gap-6">
                     {/* Profile Icon */}
                     {summonerDetails?.profileIconId ? (
                         <img 
@@ -44,16 +43,16 @@ export default function SummonerProfile({summoner, user, isFavorited, rankedInfo
   
                     {/* Summoner Info */}
                     <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                            <h2 className="text-3xl font-bold  text-yellow-500">
+                        <div className="flex flex-wrap items-center gap-3 mb-2">
+                            <h2 className="text-xl md:text-3xl font-bold  text-yellow-500">
                                 {summoner.gameName}
                             </h2>
-                            <span className="text-xl text-gray-400">
+                            <span className="text-lg md:text-xl text-gray-400">
                                 #{summoner.tagLine}</span>
   
                             {user && (
                                 <button onClick={onToggleFavorite}
-                                className={`px-4 py-2 rounded font-semibold transition-colors ${isFavorited ? 'bg-yellow-600  hover:bg-yellow-700' : 'bg-gray-700  hover:bg-gray-600'}`}
+                                className={`px-4 py-2 rounded font-semibold transition-colors ${isFavorited ? 'bg-[#daba08]  hover:bg-[#f4ee7b]' : 'bg-[#555147]  hover:bg-[#3c3623]'}`}
                                 title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}>
                                      {isFavorited ? '★' : '☆'}
                                 </button>
@@ -65,13 +64,13 @@ export default function SummonerProfile({summoner, user, isFavorited, rankedInfo
                                 Level {summonerDetails?.summonerLevel ||'?'}
                             </span>
                             <span>•</span>
-                            <span>OCE</span>
+                            <span>{region}</span>
                         </div>
                     </div>
   
                     {/* Ranked Info */}
                     {soloRank && (
-                        <div className="flex items-center gap-4 bg-gray-800  rounded-lg p-4">
+                        <div className="flex  items-center gap-4 bg-[#48354c]  rounded-lg p-4 " style={{boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.6)'}}>
                              {getRankIcon(soloRank.tier) && (
                                 <img 
                                     src={getRankIcon(soloRank.tier)!}

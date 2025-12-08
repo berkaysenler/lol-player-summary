@@ -13,14 +13,28 @@ interface MatchData {
     info: any
 }
 
-// Regional endpoints configuration
-// For OCE (Oceania) region:
-// - Routing: sea (for match data and account data)
-// - Platform: oc1 (for summoner/ranked data)
-const ROUTING_REGION = 'sea'; // americas, asia, europe, sea
-const PLATFORM_REGION = 'oc1'; // oc1, na1, euw1, kr, etc.
+// Region mappings for different servers
+const REGION_CONFIG: { [key: string]: { account: string; match: string; platform: string } } = {
+    'OCE': { account: 'americas', match: 'sea', platform: 'oc1' },
+    'NA': { account: 'americas', match: 'americas', platform: 'na1' },
+    'EUW': { account: 'europe', match: 'europe', platform: 'euw1' },
+    'EUNE': { account: 'europe', match: 'europe', platform: 'eun1' },
+    'KR': { account: 'asia', match: 'asia', platform: 'kr' },
+    'JP': { account: 'asia', match: 'asia', platform: 'jp1' },
+    'BR': { account: 'americas', match: 'americas', platform: 'br1' },
+    'LAN': { account: 'americas', match: 'americas', platform: 'la1' },
+    'LAS': { account: 'americas', match: 'americas', platform: 'la2' },
+    'TR': { account: 'europe', match: 'europe', platform: 'tr1' },
+    'RU': { account: 'europe', match: 'europe', platform: 'ru' },
+};
 
-async function getAccount(gameName: string, tagLine: string){
+function getRegionConfig(region: string = 'OCE') {
+    return REGION_CONFIG[region.toUpperCase()] || REGION_CONFIG['OCE'];
+}
+
+async function getAccount(gameName: string, tagLine: string, region: string = 'OCE'){
+    const config = getRegionConfig(region);
+
     const dbResult = await pool.query(
         'SELECT * FROM summoners WHERE game_name = $1 AND tag_line = $2',
         [gameName, tagLine]
@@ -34,7 +48,7 @@ async function getAccount(gameName: string, tagLine: string){
         }
     }
 
-    const url = `https://${ROUTING_REGION}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${gameName}/${tagLine}`;
+    const url = `https://${config.account}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${gameName}/${tagLine}`;
     console.log(`Fetching account from: ${url}`);
 
     const response = await fetch(url, {
@@ -46,6 +60,11 @@ async function getAccount(gameName: string, tagLine: string){
     if (!response.ok) {
         const errorBody = await response.text();
         console.error(`Riot API error response:`, errorBody);
+
+        if (response.status === 404) {
+            throw new Error(`Summoner "${gameName}#${tagLine}" not found in ${region.toUpperCase()}. Try a different region or check the spelling.`);
+        }
+
         throw new Error(`Riot API error: ${response.status} - ${response.statusText}`);
     }
 
@@ -64,9 +83,10 @@ async function getAccount(gameName: string, tagLine: string){
 }
 
 
-async function getMatchIds(puuid: string){
-    // Add query parameters to get last 20 matches of any type
-    const url = `https://${ROUTING_REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=20`;
+async function getMatchIds(puuid: string, region: string = 'OCE'){
+    const config = getRegionConfig(region);
+
+    const url = `https://${config.match}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=20`;
     console.log(`Fetching match IDs from: ${url}`);
 
     const response = await fetch (url, {
@@ -87,7 +107,8 @@ async function getMatchIds(puuid: string){
 }
 
 
-async function getMatchDetails(matchId: string){
+async function getMatchDetails(matchId: string, region: string = 'OCE'){
+    const config = getRegionConfig(region);
 
     const cachedMatch = await redis.get(`match:${matchId}`);
     if(cachedMatch){
@@ -100,16 +121,16 @@ async function getMatchDetails(matchId: string){
         [matchId]
     )
     if(dbResult.rows.length > 0) {
-        console.log('Cache hit: PostgreSQL')   
+        console.log('Cache hit: PostgreSQL')
         const matchData = dbResult.rows[0].match_data;
 
         await redis.set(`match:${matchId}`, matchData, {ex: 1800})
         return matchData;
     }
-    
+
     console.log('Cache miss: Calling Riot API');
 
-    const url = `https://${ROUTING_REGION}.api.riotgames.com/lol/match/v5/matches/${matchId}`;
+    const url = `https://${config.match}.api.riotgames.com/lol/match/v5/matches/${matchId}`;
     console.log(`Fetching match details from: ${url}`);
 
     const response = await fetch (url, {
@@ -133,12 +154,14 @@ async function getMatchDetails(matchId: string){
             'INSERT INTO matches (match_id, match_data) VALUES ($1, $2) ON CONFLICT (match_id) DO NOTHING', [matchId, data]
         )
     ]);
-    
+
     return data;
 }
 
-async function getSummonerByPuuid(puuid: string){
-    const url = `https://${PLATFORM_REGION}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
+async function getSummonerByPuuid(puuid: string, region: string = 'OCE'){
+    const config = getRegionConfig(region);
+
+    const url = `https://${config.platform}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
     console.log(`Fetching summoner from: ${url}`);
 
     const response = await fetch (url, {
@@ -157,8 +180,10 @@ async function getSummonerByPuuid(puuid: string){
     return data
 }
 
-async function getRankedInfo(puuid: string){
-    const url = `https://${PLATFORM_REGION}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`;
+async function getRankedInfo(puuid: string, region: string = 'OCE'){
+    const config = getRegionConfig(region);
+
+    const url = `https://${config.platform}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`;
     console.log(`Fetching ranked info from: ${url}`);
 
     const response = await fetch(url, {

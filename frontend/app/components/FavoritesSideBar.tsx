@@ -1,7 +1,9 @@
 'use client';
 
-  interface FavoritesSidebarProps {favorites: any[]; 
-    onSelectSummoner: (gameName: string, tagLine: string) => void;
+  import { getRankIcon, getRankForQueue } from '@/utils/riot'
+
+  interface FavoritesSidebarProps {favorites: any[];
+    onSelectSummoner: (gameName: string, tagLine: string, region: string) => void;
     onRemoveFavorite: (puuid: string) => void;
   }
 
@@ -11,24 +13,12 @@
     onRemoveFavorite 
   }: FavoritesSidebarProps) {
 
-    // Helper to get rank icon URL
-    function getRankIcon(tier: string) {
-      if (!tier) return null;
-      const tierLower = tier.toLowerCase();
 
-      // Use opgg's CDN which has all tier icons including emerald
-      return `https://opgg-static.akamaized.net/images/medals_new/${tierLower}.png`;
-    }
-
-    // Helper to find specific queue rank
-    function getRankForQueue(rankedData: any[], queueType: string) {
-      if (!rankedData) return null;
-      return rankedData.find((entry: any) => entry.queueType === queueType);
-    }
+   
 
     if (favorites.length === 0) {
       return (
-        <div className="w-90 bg-gray-900 p-4 rounded-lg">
+        <div className="bg-[#48354c] p-4 rounded-lg" style={{boxShadow: 'rgba(0, 0, 0, .24) 0px 2px 8px 0px'}}>
           <h2 className="text-xl font-bold mb-4 text-purple-400">Favorites</h2>
             <p className="text-gray-500 text-sm">
                 No favorites yet. Search for asummoner and click the ★ button!
@@ -38,18 +28,19 @@
     }
 
     return (
-      <div className="w-90 bg-gray-900 p-4 rounded-lg">
-        <h2 className="text-xl font-bold mb-4 text-purple-400">Favorites</h2>
+      <div className="bg-[#48354c] p-4 rounded-lg " style={{boxShadow: 'rgba(0, 0, 0, .24) 0px 2px 8px 0px'}}>
+        <h2 className="text-xl font-bold mb-4 text-[#f8c48d]">Favorites</h2>
             <div className="space-y-3">
-                {favorites.map((fav) => {
+                {favorites.map((fav, index) => {
                     const soloRank = getRankForQueue(fav.rankedData, 'RANKED_SOLO_5x5');
                     const flexRank = getRankForQueue(fav.rankedData, 'RANKED_FLEX_SR');
 
             return (
-              <div 
-                key={fav.puuid}
-                className="bg-gray-800 p-3 rounded hover:bg-gray-700 transition-colors cursor-pointer group relative"
-                onClick={() => onSelectSummoner(fav.game_name, fav.tag_line)}
+              <div
+                key={fav.puuid || `favorite-${index}`}
+                className="bg-[#5a4965] p-3 rounded-lg hover:bg-[#322334] transition-colors cursor-pointer group relative"
+                onClick={() => onSelectSummoner(fav.game_name, fav.tag_line, 'OCE')}
+                style={{boxShadow: '0 4px 6px -4px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)'}}
               >
                 {/* Remove button - top right */}
                 <button
@@ -101,7 +92,7 @@
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                             }}
-                            />
+                            />  
                       )}
                       <span className="text-blue-400 font-semibold">
                         Ranked Solo/Duo:

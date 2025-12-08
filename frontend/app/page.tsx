@@ -8,297 +8,55 @@ import MatchList from './components/MatchList';
 import SearchBar from './components/SearchBar';
 import FavoritesSidebar from './components/FavoritesSideBar';
 
+// Hooks
+import { useAuth } from '@/hooks/useAuth';
+import { useSummonerSearch } from '@/hooks/useSummonerSearch';
+import { useFavorites } from '@/hooks/useFavorites';
+import { useCoaching } from '@/hooks/useCoaching';
+
 
 export default function Home() {
 
-  const [gameName, setGameName] = useState('');
-  const [tagLine, setTagLine] = useState('');
-  interface Summoner{
-    puuid: string;
-    gameName: string;
-    tagLine: string;
-  }
+  const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
 
-  const [summoner, setSummoner] = useState<Summoner | null>(null)
-  const [matches, setMatches] = useState<any[]>([])
-  const [matchDetails, setMatchDetails] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-  const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
-  const [coaching, setCoaching] = useState<{[key: string]: string}>({})
-  const [loadingCoaching, setLoadingCoaching] = useState<string | null>(null)
-  const [user, setUser] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [summonerDetails, setSummonerDetails] = useState<any>(null)
-  const [rankedInfo, setRankedInfo] = useState<any[]>([])
-  const [matchesDisplayed, setMatchesDisplayed] = useState(5)
+  const {user, logout} = useAuth();
+  const{
+    summoner,
+    summonerDetails,
+    rankedInfo,
+    matches,
+    matchDetails,
+    loading,
+    error,
+    currentRegion,
+    searchSummoner,
+    loadMoreMatches,
+    clearError,
+  } = useSummonerSearch();
 
-
-  useEffect(() => {
-    // Check if user is logged in
-    supabase.auth.getSession().then(({
-      data:{session}
-    }) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser)
-      console.log('Session user:', currentUser)
-      if(currentUser){
-        loadFavorites()
-      }
-    })
-
-    // Listen for auth changes
-    const {data: {subscription}} = supabase.auth.onAuthStateChange((_even, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser)
-      if(currentUser){
-        loadFavorites()
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [])
-
-  useEffect(() => {
-    if(user) {
-      loadFavorites();
-    }
-  }, [user])
-
-  async function getCoaching(matchId: string, playerStats: any){
-    setLoadingCoaching(matchId);
-
-    try {
-      const response = await fetch('http://localhost:3001/api/coaching', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(playerStats)
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to get coaching analysis');
-      }
-
-      const data = await response.json();
-      setCoaching(prev => ({...prev, [matchId]: data.coaching }))
-    } catch (err: any) {
-      console.error('Error getting coaching:', err)
-      setCoaching(prev => ({...prev, [matchId]: 'Failed to load coaching analysis. Please try again.' }))
-    } finally {
-      setLoadingCoaching(null)
-    }
-  }
+  const { favorites, toggleFavorite, removeFavorite} = useFavorites(user);
+  const {coaching, loadingCoaching, getCoaching} = useCoaching();
+  const isFavorited = favorites.some((fav: any) => fav.puuid === summoner?.puuid);
 
 
 
-
-  async function searchSummoner(gameName: string, tagLine: string){
-    setLoading(true)
-    setError(null)
-
-    setSummoner(null);
-    setSummonerDetails(null)
-    setRankedInfo([])
-    setMatchesDisplayed(5)
-    setMatches([]);
-    setMatchDetails([]);
-    setCoaching({});
-    setExpandedMatch(null);
-
-    try {
-      const summonerRes = await fetch(`http://localhost:3001/api/summoner/${gameName}/${tagLine}`);
-
-      if (!summonerRes.ok) {
-        const errorData = await summonerRes.json();
-        throw new Error(errorData.error || 'Failed to fetch summoner data');
-      }
-
-      const summonerData = await summonerRes.json();
-      setSummoner(summonerData);
-
-      const [detailsRes, rankedRes] = await Promise.all([fetch(`http://localhost:3001/api/summoner/by-puuid/${summonerData.puuid}`), fetch(`http://localhost:3001/api/ranked/${summonerData.puuid}`)])
-
-      const details = detailsRes.ok ? await detailsRes.json() : null;
-      const ranked = rankedRes. ok ? await rankedRes.json() : [];
-
-      setSummonerDetails(details)
-      setRankedInfo(ranked)
-
-      const matchesRes = await fetch(`http://localhost:3001/api/matches/${summonerData.puuid}`);
-
-      if (!matchesRes.ok) {
-        const errorData = await matchesRes.json();
-        throw new Error(errorData.error || 'Failed to fetch match data');
-      }
-
-      const matchesData = await matchesRes.json()
-      console.log('Matches data:', matchesData)
-
-      if(!Array.isArray(matchesData)) {
-        console.error('Expected array but got:', matchesData)
-        throw new Error('Invalid match data received');
-      }
-
-      setMatches(matchesData)
-
-      const detailsPromises = matchesData.slice(0, matchesDisplayed).map((matchId:string) =>
-        fetch(`http://localhost:3001/api/match/${matchId}`)
-          .then(res => {
-            if (!res.ok) throw new Error('Failed to fetch match details');
-            return res.json();
-          })
-      )
-
-      const detailsData = await Promise.all(detailsPromises)
-      setMatchDetails(detailsData)
-    } catch (err: any) {
-      console.error('Error searching summoner:', err)
-      setError(err.message || 'An error occurred while searching for the summoner')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-
-
-
-  async function loadMoreMatches(){
-    if(!matches || matches.length === 0) return
-
-    const newDisplayCount = matchesDisplayed + 5;
-    const matchesToFetch = matches.slice(matchesDisplayed, newDisplayCount)
-
-    setLoading(true)
-
-    try{
-      const detailsPromises = matchesToFetch.map((matchId: string) => fetch(`http://localhost:3001/api/match/${matchId}`).then(res => {
-        if(!res.ok) throw new Error('Failed to fetch match details');
-        return res.json()
-      }))
-
-      const newDetails = await Promise.all(detailsPromises)
-      setMatchDetails([...matchDetails, ...newDetails])
-
-      setMatchesDisplayed(newDisplayCount)
-    } catch (err: any){
-      console.error('Error loading more matches:', err)
-      setError(err.message || 'Failed to load more matches')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-
-
-  async function handleLogout(){
-    await supabase.auth.signOut()
-    setUser(null)
-  }
-
-  const [favoriteSummoners, setFavoriteSummoners] = useState<any>([])
-
-  async function loadFavorites() {
-    console.log('loadFavorites called, user:', user);
-
-    if (!user) {
-      console.log('No user, skipping favorites load');
-      return;
-    }
-
-    console.log('Fetching favorites for user:', user.id);
-
-    try {
-      const { data, error } = await supabase
-        .from('favorite_summoners')
-        .select('*')
-        .eq('user_id', user.id);
-
-      console.log('Favorites data:', data);
-      console.log('Favorites error:', error);
-
-      if (error) {
-        console.error('Error loading favorites:', error);
-        return;
-      }
-
-      // Fetch detailed info for each favorite
-      const enrichedFavorites = await Promise.all(
-        (data || []).map(async (fav) => {
-          try {
-            // Fetch summoner details and ranked info in parallel
-            const [summonerRes, rankedRes] = await Promise.all([
-              fetch(`http://localhost:3001/api/summoner/by-puuid/${fav.puuid}`),
-              fetch(`http://localhost:3001/api/ranked/${fav.puuid}`)
-            ]);
-
-            const summonerData = summonerRes.ok ? await summonerRes.json() : null;
-            const rankedData = rankedRes.ok ? await rankedRes.json() : [];
-
-            return {
-              ...fav,
-              profileIconId: summonerData?.profileIconId,
-              summonerLevel: summonerData?.summonerLevel,
-              rankedData: rankedData
-            };
-          } catch (err) {
-            console.error('Error fetching details for', fav.game_name, err);
-            return fav; // Return basic data if fetch fails
-          }
-        })
-      );
-
-      setFavoriteSummoners(enrichedFavorites);
-      console.log('Set enriched favorites:', enrichedFavorites);
-    } catch (err) {
-      console.error('Error in loadFavorites:', err);
-    }
-  }
-
-  async function toggleFavorite(){
-    if(!user || !summoner) return;
-
-    const isFavorited = favoriteSummoners.some((fav:any) => fav.puuid === summoner.puuid);
-
-    if(isFavorited){
-      const {error} = await supabase.from('favorite_summoners').delete().eq('user_id',user.id).eq('puuid', summoner.puuid)
-
-      if(!error) loadFavorites();
-    } else{
-      const {error} = await supabase.from('favorite_summoners').insert({
-        user_id: user.id,
-        puuid: summoner.puuid,
-        game_name: summoner.gameName,
-        tag_line: summoner.tagLine
-      })
-      if(!error) loadFavorites()
-    }
-  }
-
-  async function removeFavorite(puuid: string) {
-    if(!user) return;
-
-    const{error} = await supabase.from('favorite_summoners').delete().eq('user_id', user.id).eq('puuid', puuid)
-
-    if(!error) {
-      loadFavorites()
-
-      if(summoner?.puuid === puuid) {
-        setSummoner(null)
-        setMatches([])
-        setMatchDetails([])
-      }
-    }
-  }
 
   return (
-    <main className='min-h-screen bg-gray-800 text-white p-8'>
-      <Navbar user={user}
-        onLogout={handleLogout}/>
+    <>
+    <div className='min-h-screen bg-[#41324d] text-white '>
 
-        <div className='flex gap-6'>
+    <Navbar user={user}
+        onLogout={logout}/>
+
+    <main className='p-4 md:p-6 lg:p-8'>
+      
+
+        <div className='flex flex-col lg:flex-row gap-6'>
           {/* left sidebar - only if user is logged in */}
           {user && (
-            <div className='w-90 flex-shrink-0'>
-              <div className='sticky top-8 max-h-[calc(100vh-8rem)] overflow-y-auto'>
-            <FavoritesSidebar favorites={favoriteSummoners}
+            <div className='hidden lg:block w-90 flex-shrink-0'>
+              <div className='sticky top-8 max-h-[calc(100vh-8rem)] overflow-y-auto p-2 pr-4'>
+            <FavoritesSidebar favorites={favorites}
             onSelectSummoner={searchSummoner}
             onRemoveFavorite={removeFavorite}/>
               </div>
@@ -307,23 +65,40 @@ export default function Home() {
           {/* main content */}
           <div className='flex-1 min-w-0'>
 
-      <SearchBar onSearch={searchSummoner}
-        loading={loading}/>
+      <SearchBar
+        onSearch={searchSummoner}
+        loading={loading}
+        onClearError={clearError}/>
 
         {error && (
-          <div className='bg-red-500 text-white p-4 rounded-lg mb-4'>
-            <p className='font-semibold'>Error: {error}</p>
+          <div className='bg-red-900/50 border border-red-500 text-red-100 p-6 rounded-lg mb-6 max-w-2xl mx-auto'>
+            <div className='flex items-start gap-3'>
+              <span className='text-2xl'>⚠️</span>
+              <div className='flex-1'>
+                <p className='font-bold text-lg mb-2'>Summoner Not Found</p>
+                <p className='text-sm mb-3'>{error}</p>
+                <div className='bg-red-950/30 p-3 rounded text-xs'>
+                  <p className='font-semibold mb-1'>💡 Troubleshooting Tips:</p>
+                  <ul className='list-disc list-inside space-y-1 text-red-200'>
+                    <li>Double-check the summoner name and tag spelling</li>
+                    <li>Make sure you selected the correct region</li>
+                    <li>Try searching in a different region if you're not sure</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
         {summoner && (
-          <SummonerProfile 
+          <SummonerProfile
           summoner={summoner}
           summonerDetails={summonerDetails}
           rankedInfo={rankedInfo}
+          region={currentRegion}
           user={user}
-          isFavorited={favoriteSummoners.some((fav:any) => fav.puuid === summoner.puuid)}
-          onToggleFavorite={toggleFavorite}/>
+          isFavorited={isFavorited}
+          onToggleFavorite={() => toggleFavorite(summoner, isFavorited)}/>
         )}
 
         <MatchList matchDetails={matchDetails}
@@ -340,6 +115,8 @@ export default function Home() {
             </div>
           </div>
     </main>
+  </div>
+  </>
     
   );
 }

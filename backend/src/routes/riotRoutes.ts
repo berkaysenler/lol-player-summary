@@ -8,7 +8,8 @@ router.get('/api/summoner/by-puuid/:puuid',
     async (req: Request, res: Response) => {
         try {
             const { puuid } = req.params;
-            const data = await getSummonerByPuuid(puuid);
+            const region = (req.query.region as string) || 'OCE';
+            const data = await getSummonerByPuuid(puuid, region);
             res.json(data);
         } catch (error) {
             console.error(error);
@@ -21,8 +22,8 @@ router.get('/api/summoner/:gameName/:tagLine', async (req: Request, res: Respons
     try{
 
         const {gameName, tagLine} = req.params;
-        const data = await getAccount(gameName, tagLine
-        );
+        const region = (req.query.region as string) || 'OCE';
+        const data = await getAccount(gameName, tagLine, region);
 
         res.json(data);
     }
@@ -37,7 +38,8 @@ router.get('/api/matches/:puuid', async (req: Request, res: Response) => {
     try{
 
         const {puuid} = req.params;
-        const data = await getMatchIds(puuid);
+        const region = (req.query.region as string) || 'OCE';
+        const data = await getMatchIds(puuid, region);
 
         res.json(data);
     } catch(error){
@@ -52,7 +54,8 @@ router.get('/api/match/:matchId', async (req: Request, res: Response) => {
     try{
 
         const {matchId} = req.params;
-        const data = await getMatchDetails(matchId)
+        const region = (req.query.region as string) || 'OCE';
+        const data = await getMatchDetails(matchId, region)
 
         res.json(data)
     } catch(error){
@@ -67,7 +70,8 @@ router.get('/api/ranked/:puuid',
     async (req: Request, res: Response) => {
         try {
             const { puuid } = req.params;
-            const data = await getRankedInfo(puuid);
+            const region = (req.query.region as string) || 'OCE';
+            const data = await getRankedInfo(puuid, region);
             res.json(data);
         } catch (error) {
             console.error(error);

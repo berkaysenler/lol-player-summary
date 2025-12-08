@@ -1,0 +1,35 @@
+
+> backend@1.0.0 dev
+> ts-node src/index.ts
+
+Server is running on port 3001
+Fetching summoner from: https://oc1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/4nmWDJpELazuk0eR0DaROKuBALEfTEsIT64WpxT8YgF0sY5lsPJgEWEghmLtSxjZkVlm7MvTkc7hpA
+Fetching ranked info from: https://oc1.api.riotgames.com/lol/league/v4/entries/by-puuid/4nmWDJpELazuk0eR0DaROKuBALEfTEsIT64WpxT8YgF0sY5lsPJgEWEghmLtSxjZkVlm7MvTkc7hpA
+Fetching summoner from: https://oc1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/87gHHJVysDTkfpp0jGymmvIj0CulvE9NhOD1sdx2yUFkdDe_q3-BycVVdKcNQaXiVu-KqlK79nSYCw
+Fetching ranked info from: https://oc1.api.riotgames.com/lol/league/v4/entries/by-puuid/87gHHJVysDTkfpp0jGymmvIj0CulvE9NhOD1sdx2yUFkdDe_q3-BycVVdKcNQaXiVu-KqlK79nSYCw
+Fetching summoner from: https://oc1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/8Z_XXg2AU1HN-L0MI16YntsutxqNbvEm8uw3T3Sh9FIyR2jJhEFOOLQcE_8RvxQd7ROScKYAX5tCew
+Fetching ranked info from: https://oc1.api.riotgames.com/lol/league/v4/entries/by-puuid/8Z_XXg2AU1HN-L0MI16YntsutxqNbvEm8uw3T3Sh9FIyR2jJhEFOOLQcE_8RvxQd7ROScKYAX5tCew
+Fetching ranked info from: https://oc1.api.riotgames.com/lol/league/v4/entries/by-puuid/87gHHJVysDTkfpp0jGymmvIj0CulvE9NhOD1sdx2yUFkdDe_q3-BycVVdKcNQaXiVu-KqlK79nSYCw
+Fetching ranked info from: https://oc1.api.riotgames.com/lol/league/v4/entries/by-puuid/4nmWDJpELazuk0eR0DaROKuBALEfTEsIT64WpxT8YgF0sY5lsPJgEWEghmLtSxjZkVlm7MvTkc7hpA
+Fetching ranked info from: https://oc1.api.riotgames.com/lol/league/v4/entries/by-puuid/8Z_XXg2AU1HN-L0MI16YntsutxqNbvEm8uw3T3Sh9FIyR2jJhEFOOLQcE_8RvxQd7ROScKYAX5tCew
+Fetching summoner from: https://oc1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/87gHHJVysDTkfpp0jGymmvIj0CulvE9NhOD1sdx2yUFkdDe_q3-BycVVdKcNQaXiVu-KqlK79nSYCw
+Fetching summoner from: https://oc1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/8Z_XXg2AU1HN-L0MI16YntsutxqNbvEm8uw3T3Sh9FIyR2jJhEFOOLQcE_8RvxQd7ROScKYAX5tCew
+Fetching ranked info from: https://oc1.api.riotgames.com/lol/league/v4/entries/by-puuid/87gHHJVysDTkfpp0jGymmvIj0CulvE9NhOD1sdx2yUFkdDe_q3-BycVVdKcNQaXiVu-KqlK79nSYCw
+Fetching ranked info from: https://oc1.api.riotgames.com/lol/league/v4/entries/by-puuid/8Z_XXg2AU1HN-L0MI16YntsutxqNbvEm8uw3T3Sh9FIyR2jJhEFOOLQcE_8RvxQd7ROScKYAX5tCew
+Fetching summoner from: https://oc1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/4nmWDJpELazuk0eR0DaROKuBALEfTEsIT64WpxT8YgF0sY5lsPJgEWEghmLtSxjZkVlm7MvTkc7hpA
+Fetching summoner from: https://oc1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/8Z_XXg2AU1HN-L0MI16YntsutxqNbvEm8uw3T3Sh9FIyR2jJhEFOOLQcE_8RvxQd7ROScKYAX5tCew
+Fetching ranked info from: https://oc1.api.riotgames.com/lol/league/v4/entries/by-puuid/4nmWDJpELazuk0eR0DaROKuBALEfTEsIT64WpxT8YgF0sY5lsPJgEWEghmLtSxjZkVlm7MvTkc7hpA
+Fetching summoner from: https://oc1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/87gHHJVysDTkfpp0jGymmvIj0CulvE9NhOD1sdx2yUFkdDe_q3-BycVVdKcNQaXiVu-KqlK79nSYCw
+Fetching summoner from: https://oc1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/4nmWDJpELazuk0eR0DaROKuBALEfTEsIT64WpxT8YgF0sY5lsPJgEWEghmLtSxjZkVlm7MvTkc7hpA
+Fetching account from: https://sea.api.riotgames.com/riot/account/v1/accounts/by-riot-id/lenore/poex
+Riot API error response: {"status":{"message":"Forbidden","status_code":403}}
+Error: Riot API error: 403 - Forbidden
+    at getAccount (/Users/berkaissu/RiotProject/backend/src/services/riotService.ts:49:15)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async /Users/berkaissu/RiotProject/backend/src/routes/riotRoutes.ts:24:22
+Fetching summoner from: https://oc1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/4nmWDJpELazuk0eR0DaROKuBALEfTEsIT64WpxT8YgF0sY5lsPJgEWEghmLtSxjZkVlm7MvTkc7hpA
+Fetching ranked info from: https://oc1.api.riotgames.com/lol/league/v4/entries/by-puuid/4nmWDJpELazuk0eR0DaROKuBALEfTEsIT64WpxT8YgF0sY5lsPJgEWEghmLtSxjZkVlm7MvTkc7hpA
+Fetching summoner from: https://oc1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/87gHHJVysDTkfpp0jGymmvIj0CulvE9NhOD1sdx2yUFkdDe_q3-BycVVdKcNQaXiVu-KqlK79nSYCw
+Fetching ranked info from: https://oc1.api.riotgames.com/lol/league/v4/entries/by-puuid/87gHHJVysDTkfpp0jGymmvIj0CulvE9NhOD1sdx2yUFkdDe_q3-BycVVdKcNQaXiVu-KqlK79nSYCw
+Fetching summoner from: https://oc1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/8Z_XXg2AU1HN-L0MI16YntsutxqNbvEm8uw3T3Sh9FIyR2jJhEFOOLQcE_8RvxQd7ROScKYAX5tCew
+Fetching ranked info from: https://oc1.api.riotgames.com/lol/league/v4/entries/by-puuid/8Z_XXg2AU1HN-L0MI16YntsutxqNbvEm8uw3T3Sh9FIyR2jJhEFOOLQcE_8RvxQd7ROScKYAX5tCew
